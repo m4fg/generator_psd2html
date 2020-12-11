@@ -134,7 +134,7 @@
             for(var i=0; i<depth-1; i++) {
                 indent += '  ';
             }
-            console.log(indent + '-> ' + val.name + '  (' + val.type + ')');
+            // console.log(indent + '-> ' + val.name + '  (' + val.type + ')');
             if (val.type == 'artboardSection') {
                 console.log(val.name + '---------------');
                 if (val.layers) {
@@ -148,7 +148,7 @@
                     var top = bounds.top - artboard.bounds.top;
                     var left = bounds.left - artboard.bounds.left;
                     _html += indent + '<section id="' + val.name.replace('#', '') + '">' + "\n";
-                    _css += indent + ('#' + val.name.replace('#', '') + ' {'+ "\n" + indent + '  position: absolute; top: ' + top + 'px; left: ' + left + 'px;') + "\n";
+                    _css += indent + ('#' + val.name.replace('#', '') + ' {'+ "\n" + indent + '  position: absolute; top: ' + top + 'px; left: 0px; width: 100%;') + "\n";
                     procLayers(val.layers, depth+1, artboard, val);
                     _css += indent + ('}') + "\n\n";
                     _html += indent + '</section>' + "\n\n";
@@ -162,7 +162,7 @@
                 var cssom = _SONToCSSConverter.toCSS(son.layers);
                 var css = _SONToCSSConverter.toCSSText(cssom);
                 // console.log(cssom);
-                // console.log(stringify(val.text.textStyleRange));
+                console.log(stringify(val.text.textStyleRange));
                 
                 if (artboard) {
                     // console.log(artboard);
@@ -171,20 +171,32 @@
                     var width = bounds.right - bounds.left;
                     if (sec) {
                         top -= sec.bounds.top;
-                        left -= sec.bounds.left;
+                        left -= artboard.bounds.left;
                     } else if (artboard) {
                         top -= artboard.bounds.top;
                         left -= artboard.bounds.left;
                     }
                     var text = val.text.textKey;
-                    // console.log('text: ' + text + ' length:' + text.length);
+                    console.log('text: ' + text.replace(/\r/g, "\n") + ' length:' + text.length);
 
-                    _css += indent + ('.' + val.name.replace('.txt', '') + ' { position: absolute; top: ' + top + 'px; left: ' + left + 'px; width: ' + width + 'px; }') + "\n";
+                    _css += indent + ('.' + val.name.replace('.txt', '') + ' { position: absolute; top: ' + top + 'px; left: ' + left + 'px; z-index: 1; }') + "\n";
                     _html += indent + '<div class="' + val.name.replace('.txt', '') + '">' + "\n";
+                    var proccessed = 0;
                     val.text.textStyleRange.forEach((v, idx) => {
-                        var t = text.substring(v.from, v.to).replace("\r", "<br>");
+                        if (v.textStyle.color == undefined) {
+                            v.textStyle.color = {
+                                red: 0,
+                                green: 0,
+                                blue: 0,
+                            };
+                        }
+                        if (v.from < proccessed) {
+                            return;
+                        }
+                        var t = text.substring(v.from, v.to).replace(/\r/g, "<br>");
                         _css += indent + ('.' + val.name.replace('.txt', '') + '_' + idx + ' { font-family: "' + v.textStyle.fontName + '"; font-weight: ' + v.textStyle.fontStyleName.toLowerCase().replace('regular', 'normal') + '; font-size: ' + Math.round(v.textStyle.size) + 'px; color: rgb(' + Math.round(v.textStyle.color.red) + ',' + Math.round(v.textStyle.color.green) + ',' + Math.round(v.textStyle.color.blue) + '); }') + "\n";
                         _html += indent + '  <span class="' + val.name.replace('.txt', '') + '_' + idx + '">' + t + '</span>' + "\n";
+                        proccessed = v.to;
                     });
                     _html += indent + '</div>' + "\n";
                 }
@@ -196,7 +208,7 @@
                 var left = bounds.left;
                 if (sec) {
                     top -= sec.bounds.top;
-                    left -= sec.bounds.left;
+                    left -= artboard.bounds.left;
                 } else if (artboard) {
                     top -= artboard.bounds.top;
                     left -= artboard.bounds.left;
@@ -219,7 +231,7 @@
                     _html += indent + '<div class="' + val.name.replace('.png', '') + '"></div>' + "\n";
                 }
             } else if (val.layers) {
-                procLayers(val.layers, depth+1, artboard);
+                procLayers(val.layers, depth+1, artboard, sec);
             }
         });
     }
