@@ -11,7 +11,7 @@
   "license": "Public Domain",
   "readmeFilename": "README.md",
   "scripts": {
-    "test": "grunt test"
+    "gen": "node ../generator-core/app.js -v -f ./"
   },
   "dependencies": {
   },

@@ -127,15 +127,14 @@
         });
     }
 
-    function procLayers(layers, depth=0, artboard=null) {
+    function procLayers(layers, depth=0, artboard=null, sec=null) {
         // console.log('procLayers');
         layers.forEach((val, idx) => {
-            let output = '';
-            for(var i=0; i<depth; i++) {
-                output += '  ';
+            let indent = '';
+            for(var i=0; i<depth-1; i++) {
+                indent += '  ';
             }
-            output += val.name + '  (' + val.type + ')';
-            // console.log(output);
+            console.log(indent + '-> ' + val.name + '  (' + val.type + ')');
             if (val.type == 'artboardSection') {
                 console.log(val.name + '---------------');
                 if (val.layers) {
@@ -145,10 +144,18 @@
             } else if (val.name.match(/^#/)) {
                 var cssom = '';
                 if (val.layers) {
-                    procLayers(val.layers, depth+1, artboard);
+                    var bounds = val.boundsWithFX ? val.boundsWithFX : val.bounds;
+                    var top = bounds.top - artboard.bounds.top;
+                    var left = bounds.left - artboard.bounds.left;
+                    _html += indent + '<section id="' + val.name.replace('#', '') + '">' + "\n";
+                    _css += indent + ('#' + val.name.replace('#', '') + ' {'+ "\n" + indent + '  position: absolute; top: ' + top + 'px; left: ' + left + 'px;') + "\n";
+                    procLayers(val.layers, depth+1, artboard, val);
+                    _css += indent + ('}') + "\n\n";
+                    _html += indent + '</section>' + "\n\n";
                 }
             } else if (val.type == 'textLayer' && val.name.match(/\.(txt)$/)) {
                 // console.log(stringify(val));
+                console.log(stringify(sec));
                 var bounds = val.boundsWithFX ? val.boundsWithFX : val.bounds;
 
                 var son = extractStyleInfo({layers: [val]});
@@ -159,40 +166,57 @@
                 
                 if (artboard) {
                     // console.log(artboard);
-                    var top = bounds.top - artboard.bounds.top;
-                    var left = bounds.left - artboard.bounds.left;
+                    var top = bounds.top;
+                    var left = bounds.left;
+                    var width = bounds.right - bounds.left;
+                    if (sec) {
+                        top -= sec.bounds.top;
+                        left -= sec.bounds.left;
+                    } else if (artboard) {
+                        top -= artboard.bounds.top;
+                        left -= artboard.bounds.left;
+                    }
                     var text = val.text.textKey;
                     // console.log('text: ' + text + ' length:' + text.length);
 
-                    _css += ('.' + val.name.replace('.txt', '') + ' { position: absolute; top: ' + top + 'px; left: ' + left + 'px; }') + "\n";
-                    _html += '<div class="' + val.name.replace('.txt', '') + '">' + "\n";
+                    _css += indent + ('.' + val.name.replace('.txt', '') + ' { position: absolute; top: ' + top + 'px; left: ' + left + 'px; width: ' + width + 'px; }') + "\n";
+                    _html += indent + '<div class="' + val.name.replace('.txt', '') + '">' + "\n";
                     val.text.textStyleRange.forEach((v, idx) => {
                         var t = text.substring(v.from, v.to).replace("\r", "<br>");
-                        _css += ('.' + val.name.replace('.txt', '') + '_' + idx + ' { font-family: "' + v.textStyle.fontName + '"; font-weight: ' + v.textStyle.fontStyleName.toLowerCase().replace('regular', 'normal') + '; font-size: ' + Math.round(v.textStyle.size) + 'px; color: rgb(' + Math.round(v.textStyle.color.red) + ',' + Math.round(v.textStyle.color.green) + ',' + Math.round(v.textStyle.color.blue) + '); }') + "\n";
-                        _html += '  <span class="' + val.name.replace('.txt', '') + '_' + idx + '">' + t + '</span>' + "\n";
+                        _css += indent + ('.' + val.name.replace('.txt', '') + '_' + idx + ' { font-family: "' + v.textStyle.fontName + '"; font-weight: ' + v.textStyle.fontStyleName.toLowerCase().replace('regular', 'normal') + '; font-size: ' + Math.round(v.textStyle.size) + 'px; color: rgb(' + Math.round(v.textStyle.color.red) + ',' + Math.round(v.textStyle.color.green) + ',' + Math.round(v.textStyle.color.blue) + '); }') + "\n";
+                        _html += indent + '  <span class="' + val.name.replace('.txt', '') + '_' + idx + '">' + t + '</span>' + "\n";
                     });
-                    _html += '</div>' + "\n";
+                    _html += indent + '</div>' + "\n";
                 }
             } else if (val.name.match(/\.(png|jpg)$/)) {
                 // console.log(stringify(artboard));
                 // console.log(stringify(val));
                 var bounds = val.boundsWithFX ? val.boundsWithFX : val.bounds;
+                var top = bounds.top;
+                var left = bounds.left;
+                if (sec) {
+                    top -= sec.bounds.top;
+                    left -= sec.bounds.left;
+                } else if (artboard) {
+                    top -= artboard.bounds.top;
+                    left -= artboard.bounds.left;
+                }
                 // if (val.name.substr(0, 4) == 'ch_g') {
                     // console.log('.' + val.name.replace('.png', '') + ' { top: ' + ((bounds.top-0)/1) + 'px; left: ' + ((bounds.left - 1920)/2) + 'px; }');
                 // }
 
                 if (artboard) {
                     //sp
-                    _css += ('.' + val.name.replace('.png', '') + ' { position: absolute; @include ir(\'' + val.name + '\'); top: ' + ((bounds.top - artboard.bounds.top)/1) + 'px; left: ' + ((bounds.left - artboard.bounds.left)/1) + 'px; }') + "\n";
-                    _html += '<div class="' + val.name.replace('.png', '') + '"></div>' + "\n";
+                    _css += indent + ('.' + val.name.replace('.png', '') + ' { position: absolute; @include ir(\'' + val.name + '\'); top: ' + top + 'px; left: ' + left + 'px; }') + "\n";
+                    _html += indent + '<div class="' + val.name.replace('.png', '') + '"></div>' + "\n";
                 } else {
                     //pc
                     // if (val.name.substr(0, 2) == 'ch') {
                     //     console.log('.' + val.name.replace('.png', '') + ' { top: ' + ((bounds.top-0)/1) + 'px; left: ' + ((bounds.left - 1920/2)/1) + 'px; }');
                     // }
                     //sp
-                    _css += ('.' + val.name.replace('.png', '') + ' { position: absolute; @include ir(\'' + val.name + '\'); top: ' + ((bounds.top-0)/1) + 'px; left: ' + ((bounds.left)/1) + 'px; }') + "\n";
-                    _html += '<div class="' + val.name.replace('.png', '') + '"></div>' + "\n";
+                    _css += indent + ('.' + val.name.replace('.png', '') + ' { position: absolute; @include ir(\'' + val.name + '\'); top: ' + top + 'px; left: ' + left + 'px; }') + "\n";
+                    _html += indent + '<div class="' + val.name.replace('.png', '') + '"></div>' + "\n";
                 }
             } else if (val.layers) {
                 procLayers(val.layers, depth+1, artboard);
