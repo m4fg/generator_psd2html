@@ -49,13 +49,13 @@
 
         console.log("initializing generator getting started tutorial with config %j", _config);
         
-        _generator.addMenuItem(MENU_ID, MENU_LABEL, true, false).then(
-            function () {
-                console.log("Menu created", MENU_ID);
-            }, function () {
-                console.error("Menu creation failed", MENU_ID);
-            }
-        );
+        // _generator.addMenuItem(MENU_ID, MENU_LABEL, true, false).then(
+        //     function () {
+        //         console.log("Menu created", MENU_ID);
+        //     }, function () {
+        //         console.error("Menu creation failed", MENU_ID);
+        //     }
+        // );
         _generator.onPhotoshopEvent("generatorMenuChanged", handleGeneratorMenuClicked);
 
         function initLater() {
@@ -120,10 +120,15 @@
                 console.error("[Tutorial] Error in getDocumentInfo:", err);
             }
         ).done(() => {
-            console.log('----css------------------------');
-            console.log(_css);
-            console.log('----html------------------------');
-            console.log(_html);
+            if (_css.length > 0) {
+                console.log('\x1b[33m%s\x1b[0m', '----css------------------------');
+                console.log(_css);
+            }
+            if (_html.length > 0) {
+                console.log('\x1b[33m%s\x1b[0m', '----html------------------------');
+                console.log(_html);
+            }
+            process.exit();
         });
     }
 
@@ -136,7 +141,17 @@
             }
             // console.log(indent + '-> ' + val.name + '  (' + val.type + ')');
             if (val.type == 'artboardSection') {
-                console.log(val.name + '---------------');
+                if (_css.length > 0) {
+                    console.log('\x1b[33m%s\x1b[0m', '----css------------------------');
+                    console.log(_css);
+                }
+                if (_html.length > 0) {
+                    console.log('\x1b[33m%s\x1b[0m', '----html------------------------');
+                    console.log(_html);
+                }
+                _html = "";
+                _css = "";
+                console.log('\x1b[36m%s\x1b[0m', '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ' + val.name + ' <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<');
                 if (val.layers) {
                     // console.log(stringify(val));
                     procLayers(val.layers, depth+1, val);
@@ -155,14 +170,14 @@
                 }
             } else if (val.type == 'textLayer' && val.name.match(/\.(txt)$/)) {
                 // console.log(stringify(val));
-                console.log(stringify(sec));
+                // console.log(stringify(sec));
                 var bounds = val.boundsWithFX ? val.boundsWithFX : val.bounds;
 
                 var son = extractStyleInfo({layers: [val]});
                 var cssom = _SONToCSSConverter.toCSS(son.layers);
                 var css = _SONToCSSConverter.toCSSText(cssom);
                 // console.log(cssom);
-                console.log(stringify(val.text.textStyleRange));
+                // console.log(stringify(val.text.textStyleRange));
                 
                 if (artboard) {
                     // console.log(artboard);
