@@ -162,11 +162,18 @@
                     var bounds = val.boundsWithFX ? val.boundsWithFX : val.bounds;
                     var top = bounds.top - artboard.bounds.top;
                     var left = bounds.left - artboard.bounds.left;
-                    _html += indent + '<section id="' + val.name.replace('#', '') + '">' + "\n";
+                    var tag = 'section';
+                    if (sec) {
+                        top -= sec.bounds.top;
+                        left -= artboard.bounds.left;
+                        tag = 'div';
+                    }
+
+                    _html += indent + '<'+tag+' id="' + val.name.replace('#', '') + '">' + "\n";
                     _css += indent + ('#' + val.name.replace('#', '') + ' {'+ "\n" + indent + '  position: absolute; top: ' + top + 'px; left: 0px; width: 100%;') + "\n";
                     procLayers(val.layers, depth+1, artboard, val);
                     _css += indent + ('}') + "\n\n";
-                    _html += indent + '</section>' + "\n\n";
+                    _html += indent + '</'+tag+'>' + "\n\n";
                 }
             } else if (val.type == 'textLayer' && val.name.match(/\.(txt)$/)) {
                 // console.log(stringify(val));
@@ -192,10 +199,10 @@
                         left -= artboard.bounds.left;
                     }
                     var text = val.text.textKey;
-                    console.log('text: ' + text.replace(/\r/g, "\n") + ' length:' + text.length);
+                    // console.log('text: ' + text.replace(/\r/g, "\n") + ' length:' + text.length);
 
-                    _css += indent + ('.' + val.name.replace('.txt', '') + ' { position: absolute; top: ' + top + 'px; left: ' + left + 'px; z-index: 1; }') + "\n";
-                    _html += indent + '<div class="' + val.name.replace('.txt', '') + '">' + "\n";
+                    _css += indent + ('.' + val.name.replace('.txt', '_txt') + ' { position: absolute; top: ' + top + 'px; left: ' + left + 'px; z-index: 1; }') + "\n";
+                    _html += indent + '<div class="' + val.name.replace('.txt', '_txt') + '">' + "\n";
                     var proccessed = 0;
                     val.text.textStyleRange.forEach((v, idx) => {
                         if (v.textStyle.color == undefined) {
@@ -209,13 +216,39 @@
                             return;
                         }
                         var t = text.substring(v.from, v.to).replace(/\r/g, "<br>");
-                        _css += indent + ('.' + val.name.replace('.txt', '') + '_' + idx + ' { font-family: "' + v.textStyle.fontName + '"; font-weight: ' + v.textStyle.fontStyleName.toLowerCase().replace('regular', 'normal') + '; font-size: ' + Math.round(v.textStyle.size) + 'px; color: rgb(' + Math.round(v.textStyle.color.red) + ',' + Math.round(v.textStyle.color.green) + ',' + Math.round(v.textStyle.color.blue) + '); }') + "\n";
-                        _html += indent + '  <span class="' + val.name.replace('.txt', '') + '_' + idx + '">' + t + '</span>' + "\n";
+                        _css += indent + ('.' + val.name.replace('.txt', '_txt') + '_' + idx + ' { font-family: "' + v.textStyle.fontName + '"; font-weight: ' + v.textStyle.fontStyleName.toLowerCase().replace('regular', 'normal') + '; font-size: ' + Math.round(v.textStyle.size) + 'px; color: rgb(' + Math.round(v.textStyle.color.red) + ',' + Math.round(v.textStyle.color.green) + ',' + Math.round(v.textStyle.color.blue) + '); }') + "\n";
+                        _html += indent + '  <span class="' + val.name.replace('.txt', '_txt') + '_' + idx + '">' + t + '</span>' + "\n";
                         proccessed = v.to;
                     });
                     _html += indent + '</div>' + "\n";
                 }
             } else if (val.name.match(/\.(png|jpg)$/)) {
+                // console.log(stringify(artboard));
+                // console.log(stringify(val));
+                let scale = 1;
+                if (val.name.match(/^200%/)) {
+                    scale = 2;
+                }
+                var bounds = val.boundsWithFX ? val.boundsWithFX : val.bounds;
+                var top = bounds.top;
+                var left = bounds.left;
+                if (sec) {
+                    top -= sec.bounds.top;
+                    left -= artboard.bounds.left;
+                } else if (artboard) {
+                    top -= artboard.bounds.top;
+                    left -= artboard.bounds.left;
+                }
+
+                top = top.toFixed(1);
+                left = left.toFixed(1);
+
+                var clsName = val.name.replace(/\.(png|jpg)$/, '').replace('200%', '');
+                var fileName = val.name.replace('200%', '');
+
+                _css += indent + ('.' + clsName + ' { position: absolute; @include ir(\'' + fileName + '\', '+scale+'); top: ' + top + 'px; left: ' + left + 'px; }') + "\n";
+                _html += indent + '<div class="' + clsName + '"></div>' + "\n";
+            } else if (val.name.match(/\.svg$/)) {
                 // console.log(stringify(artboard));
                 // console.log(stringify(val));
                 var bounds = val.boundsWithFX ? val.boundsWithFX : val.bounds;
@@ -228,23 +261,18 @@
                     top -= artboard.bounds.top;
                     left -= artboard.bounds.left;
                 }
-                // if (val.name.substr(0, 4) == 'ch_g') {
-                    // console.log('.' + val.name.replace('.png', '') + ' { top: ' + ((bounds.top-0)/1) + 'px; left: ' + ((bounds.left - 1920)/2) + 'px; }');
-                // }
 
-                if (artboard) {
-                    //sp
-                    _css += indent + ('.' + val.name.replace('.png', '') + ' { position: absolute; @include ir(\'' + val.name + '\'); top: ' + top + 'px; left: ' + left + 'px; }') + "\n";
-                    _html += indent + '<div class="' + val.name.replace('.png', '') + '"></div>' + "\n";
-                } else {
-                    //pc
-                    // if (val.name.substr(0, 2) == 'ch') {
-                    //     console.log('.' + val.name.replace('.png', '') + ' { top: ' + ((bounds.top-0)/1) + 'px; left: ' + ((bounds.left - 1920/2)/1) + 'px; }');
-                    // }
-                    //sp
-                    _css += indent + ('.' + val.name.replace('.png', '') + ' { position: absolute; @include ir(\'' + val.name + '\'); top: ' + top + 'px; left: ' + left + 'px; }') + "\n";
-                    _html += indent + '<div class="' + val.name.replace('.png', '') + '"></div>' + "\n";
-                }
+                var width = Math.abs(bounds.right - bounds.left).toFixed(1);
+                var height = Math.abs(bounds.bottom - bounds.top).toFixed(1);
+
+                top = top.toFixed(1);
+                left = left.toFixed(1);
+
+                var clsName = val.name.replace(/\.svg$/, '');
+                var fileName = val.name;
+
+                _css += indent + ('.' + clsName + ' { position: absolute; @include irnosz(\'' + fileName + '\'); top: ' + top + 'px; left: ' + left + 'px; width: ' + width + 'px; height: ' + height + 'px; }') + "\n";
+                _html += indent + '<div class="' + clsName + '"></div>' + "\n";
             } else if (val.layers) {
                 procLayers(val.layers, depth+1, artboard, sec);
             }
